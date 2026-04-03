@@ -47,15 +47,20 @@ function FullReportContent() {
     setMessages([welcomeMsg]);
 
     const text = initialName
-      ? `Hey, thanks for being here.\n\nI'm ready to dig into "${initialName}" for you — trademarks, domains, existing businesses, the full picture.\n\nWant me to run the analysis?`
-      : `Hey, thanks for being here.\n\nI can research any startup name for you — trademarks, domains, existing businesses, all of it.\n\nWhat name are you thinking about?`;
+      ? `Hey, thanks for being here. Let me dig into "${initialName}" for you.`
+      : `Hey, thanks for being here. What name do you want me to research?`;
 
     for (let i = 0; i <= text.length; i++) {
       await new Promise((r) => setTimeout(r, 8));
       setMessages([{ ...welcomeMsg, content: text.slice(0, i) }]);
     }
 
-    setPhase(initialName ? 'ready' : 'chatting');
+    if (initialName) {
+      setPhase('chatting');
+      streamAgent(`Run a full name analysis on "${initialName}". Check trademarks, domain availability across all major TLDs, existing businesses, phonetic conflicts, and suggest alternatives if there are issues.`);
+    } else {
+      setPhase('chatting');
+    }
   }
 
   async function streamAgent(text: string) {
@@ -126,12 +131,6 @@ function FullReportContent() {
     }
   }
 
-  function handleStartResearch() {
-    setPhase('chatting');
-    // Don't show the prompt to the user — just send it to the agent
-    streamAgent(`Run a full name analysis on "${initialName}". Check trademarks, domain availability across all major TLDs, existing businesses, phonetic conflicts, and suggest alternatives if there are issues.`);
-  }
-
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim() || isStreaming) return;
@@ -184,17 +183,6 @@ function FullReportContent() {
             </div>
           ))}
 
-          {/* Action button after welcome */}
-          {phase === 'ready' && (
-            <div className="flex justify-center pt-2">
-              <button
-                onClick={handleStartResearch}
-                className="rounded-2xl bg-accent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
-              >
-                Run the full analysis
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
