@@ -10,7 +10,7 @@ export default function Home() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    router.push(`/sign-up?name=${encodeURIComponent(name.trim())}`);
+    router.push(`/research?name=${encodeURIComponent(name.trim())}`);
   }
 
   return (
