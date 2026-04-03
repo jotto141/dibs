@@ -21,16 +21,51 @@ export async function POST(request: Request) {
     const riskMatch = text.match(/RISK:\s*(LOW|MEDIUM|HIGH)/i);
     const summaryMatch = text.match(/SUMMARY:\s*(.+)/i);
 
-    return Response.json({
-      verdict: verdictMatch?.[1]?.toUpperCase() || 'CAUTION',
-      risk: riskMatch?.[1]?.toUpperCase() || 'MEDIUM',
-      summary: summaryMatch?.[1]?.trim() || 'Analysis complete — sign up to see full details.',
-    });
-  } catch {
+    // If we got a valid structured response, use it
+    if (verdictMatch && summaryMatch) {
+      return Response.json({
+        verdict: verdictMatch[1].toUpperCase(),
+        risk: riskMatch?.[1]?.toUpperCase() || 'MEDIUM',
+        summary: summaryMatch[1].trim(),
+      });
+    }
+
+    // If agent responded but not in expected format, use the raw text as summary
+    if (text.trim().length > 10) {
+      const firstSentence = text.split(/[.!?]\s/)[0] + '.';
+      return Response.json({
+        verdict: 'CAUTION',
+        risk: 'MEDIUM',
+        summary: firstSentence.length > 200 ? firstSentence.slice(0, 197) + '...' : firstSentence,
+      });
+    }
+
     return Response.json({
       verdict: 'CAUTION',
       risk: 'MEDIUM',
-      summary: 'Could not complete preview — sign up for full analysis.',
+      summary: `"${name}" has potential but needs deeper analysis — common words and short names tend to have more conflicts.`,
+    });
+  } catch {
+    // Even on error, give them something specific to the name
+    const len = name.length;
+    const isShort = len <= 5;
+    const isReal = /^[a-z]+$/i.test(name);
+
+    let hint: string;
+    if (isShort && isReal) {
+      hint = `Short real-word names like "${name}" are highly contested — the .com is almost certainly taken, but alternatives may be open.`;
+    } else if (isShort) {
+      hint = `"${name}" is short and memorable, which is great for branding but means more competition for domains and trademarks.`;
+    } else if (isReal) {
+      hint = `"${name}" is a real word, which makes it easy to remember but increases the chance of trademark conflicts across industries.`;
+    } else {
+      hint = `"${name}" appears to be a coined term, which is strong for trademarks but you'll want to verify no one has claimed it first.`;
+    }
+
+    return Response.json({
+      verdict: 'CAUTION',
+      risk: 'MEDIUM',
+      summary: hint,
     });
   }
 }

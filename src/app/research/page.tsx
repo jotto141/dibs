@@ -12,18 +12,18 @@ interface Preview {
 }
 
 const RESEARCH_STEPS = [
-  'Analyzing name structure...',
-  'Checking trademark databases...',
-  'Scanning existing businesses...',
-  'Testing domain availability...',
-  'Evaluating phonetic conflicts...',
-  'Generating report...',
+  'Analyzing name structure',
+  'Searching trademark databases',
+  'Scanning existing businesses',
+  'Checking domain availability',
+  'Evaluating phonetic conflicts',
+  'Compiling results',
 ];
 
-const VERDICT_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  GO: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
-  CAUTION: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
-  STOP: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
+const VERDICT_STYLES: Record<string, { bg: string; text: string; border: string; glow: string }> = {
+  GO: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', glow: 'shadow-emerald-500/10' },
+  CAUTION: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20', glow: 'shadow-amber-500/10' },
+  STOP: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20', glow: 'shadow-red-500/10' },
 };
 
 const RISK_STYLES: Record<string, string> = {
@@ -32,7 +32,7 @@ const RISK_STYLES: Record<string, string> = {
   HIGH: 'text-red-400',
 };
 
-function StepItem({ text }: { text: string }) {
+function StepItem({ text, done }: { text: string; done: boolean }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -48,9 +48,13 @@ function StepItem({ text }: { text: string }) {
       )}
     >
       <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10">
-        <div className="h-1.5 w-1.5 rounded-full bg-accent" />
+        {done ? (
+          <span className="text-xs text-accent">&#10003;</span>
+        ) : (
+          <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+        )}
       </div>
-      <span className="text-sm text-[var(--muted)]">{text}</span>
+      <span className={cn('text-sm', done ? 'text-[var(--fg)]' : 'text-[var(--muted)]')}>{text}</span>
     </div>
   );
 }
@@ -70,7 +74,7 @@ function ResearchContent() {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [visibleSteps, setVisibleSteps] = useState<string[]>([]);
+  const [completedSteps, setCompletedSteps] = useState<number>(0);
   const [showResult, setShowResult] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const hasStarted = useRef(false);
@@ -85,16 +89,17 @@ function ResearchContent() {
   async function startResearch(n: string) {
     setLoading(true);
     setError('');
-    setVisibleSteps([]);
+    setCompletedSteps(0);
     setShowResult(false);
 
-    let stepIndex = 0;
+    // Progressive steps — each one appears then gets a checkmark
+    let currentStep = 0;
     const stepInterval = setInterval(() => {
-      if (stepIndex < RESEARCH_STEPS.length) {
-        setVisibleSteps((prev) => [...prev, RESEARCH_STEPS[stepIndex]]);
-        stepIndex++;
+      currentStep++;
+      if (currentStep <= RESEARCH_STEPS.length) {
+        setCompletedSteps(currentStep);
       }
-    }, 1200);
+    }, 1100);
 
     try {
       const res = await fetch('/api/preview', {
@@ -108,19 +113,18 @@ function ResearchContent() {
       setError('Something went wrong. Try again.');
     }
 
-    const waitForSteps = () =>
-      new Promise<void>((resolve) => {
-        const check = setInterval(() => {
-          if (stepIndex >= RESEARCH_STEPS.length) {
-            clearInterval(check);
-            resolve();
-          }
-        }, 200);
-      });
+    // Wait for all steps to complete
+    await new Promise<void>((resolve) => {
+      const check = setInterval(() => {
+        if (currentStep >= RESEARCH_STEPS.length) {
+          clearInterval(check);
+          resolve();
+        }
+      }, 200);
+    });
 
-    await waitForSteps();
     clearInterval(stepInterval);
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 500));
     setLoading(false);
     setShowResult(true);
   }
@@ -140,21 +144,24 @@ function ResearchContent() {
       {showUpgrade && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
-            <h2 className="mb-1 text-lg font-bold">Pay as you go</h2>
+            <h2 className="mb-2 text-xl font-bold">Ready to claim {name}?</h2>
+            <p className="mb-1 text-sm text-[var(--muted)]">
+              Add a credit card. Pay only for what you use.
+            </p>
             <p className="mb-5 text-sm text-[var(--muted)]">
-              No monthly fee. Add a credit card and pay for what you actually use.
+              No subscription. No monthly fees. Ever.
             </p>
             <Link
               href={signUpUrl}
               className="block w-full rounded-xl bg-accent py-3 text-center text-sm font-medium text-white transition-colors hover:bg-accent-hover"
             >
-              Add credit card
+              Get started
             </Link>
             <button
               onClick={() => setShowUpgrade(false)}
               className="mt-3 w-full py-2 text-center text-sm text-[var(--muted)] transition-colors hover:text-[var(--fg)]"
             >
-              Maybe later
+              Not yet
             </button>
           </div>
         </div>
@@ -171,16 +178,9 @@ function ResearchContent() {
         {/* Processing animation */}
         {loading && (
           <div className="space-y-3">
-            {visibleSteps.map((step, i) => (
-              <StepItem key={i} text={step} />
+            {RESEARCH_STEPS.slice(0, completedSteps + 1).map((step, i) => (
+              <StepItem key={step} text={step} done={i < completedSteps} />
             ))}
-            {visibleSteps.length < RESEARCH_STEPS.length && (
-              <div className="flex items-center gap-3 pt-1">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-accent" />
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -194,7 +194,7 @@ function ResearchContent() {
         {showResult && preview && vs && (
           <div className="space-y-6">
             {/* Verdict */}
-            <div className={cn('rounded-2xl border p-6 text-center', vs.bg, vs.border)}>
+            <div className={cn('rounded-2xl border p-6 text-center shadow-lg', vs.bg, vs.border, vs.glow)}>
               <div className={cn('mb-1 text-3xl font-bold tracking-tight', vs.text)}>
                 {preview.verdict}
               </div>
@@ -204,40 +204,46 @@ function ResearchContent() {
               <p className="text-sm leading-relaxed">{preview.summary}</p>
             </div>
 
-            {/* Unlock CTA */}
+            {/* Unlock */}
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
-              <button
-                onClick={() => setShowUpgrade(true)}
-                className="mb-4 w-full rounded-xl bg-accent py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
-              >
-                Unlock full report
-              </button>
-              <ul className="space-y-2 text-sm text-[var(--muted)]">
-                <li className="flex items-start gap-2">
+              <p className="mb-4 text-sm text-[var(--muted)]">
+                We found a lot more. Unlock the full report to see:
+              </p>
+              <ul className="mb-5 space-y-2.5 text-sm">
+                <li className="flex items-start gap-2.5">
                   <span className="mt-0.5 text-accent">&#10003;</span>
-                  Domain availability across .com, .io, .ai, .dev, .co, .app
+                  <span>Real domain availability — .com, .io, .ai, .dev, .co, .app</span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <span className="mt-0.5 text-accent">&#10003;</span>
-                  Detailed trademark conflict analysis
+                  <span>Full trademark conflict breakdown by class</span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <span className="mt-0.5 text-accent">&#10003;</span>
-                  Existing businesses using similar names
+                  <span>Every existing business using a similar name</span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <span className="mt-0.5 text-accent">&#10003;</span>
-                  Creative domain suggestions that are available
+                  <span>Creative domains that are actually available</span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <span className="mt-0.5 text-accent">&#10003;</span>
-                  Alternative name recommendations
+                  <span>Alternative name suggestions from our agent</span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <span className="mt-0.5 text-accent">&#10003;</span>
-                  Follow-up chat with our research agent
+                  <span>Unlimited follow-up questions with the research agent</span>
                 </li>
               </ul>
+              <button
+                onClick={() => setShowUpgrade(true)}
+                className="w-full rounded-xl bg-accent py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+              >
+                Unlock full report for {name}
+              </button>
+              <p className="mt-3 text-center text-xs text-[var(--muted)]">
+                Pay as you go — no subscription
+              </p>
             </div>
 
             <div className="text-center">
