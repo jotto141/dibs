@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { Suspense, useState, useRef, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -13,6 +13,14 @@ interface Message {
 const FREE_LIMIT = 3;
 
 export default function ResearchPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center text-[var(--muted)]">Loading...</div>}>
+      <ResearchContent />
+    </Suspense>
+  );
+}
+
+function ResearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialName = searchParams.get('name') || '';

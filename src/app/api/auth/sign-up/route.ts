@@ -6,17 +6,17 @@ export async function POST(request: Request) {
   const r = getRecursiv();
 
   try {
-    const result = await r.auth.signUp({ name, email, password });
+    const session = await r.auth.signUp({ name, email, password });
     const cookieStore = await cookies();
-    cookieStore.set('dibs_token', result.data.token, {
+    cookieStore.set('dibs_token', session.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30, // 30 days
+      maxAge: 60 * 60 * 24 * 30,
       path: '/',
     });
 
-    return Response.json({ ok: true });
+    return Response.json({ ok: true, user: session.user });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Sign up failed';
     return Response.json({ error: message }, { status: 400 });

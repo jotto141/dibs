@@ -1,93 +1,69 @@
-import Link from 'next/link';
+'use client';
 
-export default function LandingPage() {
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function Home() {
+  const router = useRouter();
+  const [name, setName] = useState('');
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    router.push(`/sign-up?name=${encodeURIComponent(name.trim())}`);
+  }
+
   return (
-    <div className="flex min-h-screen flex-col">
-      {/* Nav */}
-      <nav className="border-b border-[var(--border)] bg-[var(--bg)]/80 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <span className="text-lg font-bold tracking-tight">dibs</span>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/sign-in"
-              className="text-sm text-[var(--muted)] hover:text-[var(--fg)] transition-colors"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/sign-up"
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover transition-colors"
-            >
-              Get started free
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4">
+      {/* Subtle grid */}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)] bg-[size:64px_64px]" />
 
-      {/* Hero */}
-      <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-4 py-1.5 text-sm text-[var(--muted)]">
-          <span className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-          3 free name searches
-        </div>
+      {/* Glow */}
+      <div className="pointer-events-none absolute top-[-200px] h-[500px] w-[500px] rounded-full bg-accent/5 blur-[120px]" />
 
-        <h1 className="max-w-3xl text-5xl font-bold leading-tight tracking-tight sm:text-6xl lg:text-7xl">
-          Call <span className="text-accent">dibs</span> on your
-          <br />startup name
+      <div className="relative z-10 w-full max-w-xl text-center">
+        <h1 className="mb-3 text-[clamp(2.5rem,6vw,4rem)] font-bold leading-[1.05] tracking-tight">
+          dibs
         </h1>
 
-        <p className="mt-6 max-w-xl text-lg leading-relaxed text-[var(--muted)]">
-          Naming a startup is hard. An expert AI agent researches trademarks,
-          scans existing businesses, and checks which domains are actually
-          available — so you don't have to.
+        <p className="mx-auto mb-12 max-w-sm text-base leading-relaxed text-[var(--muted)]">
+          Enter a name. Our agent checks trademarks, existing
+          businesses, and real domain availability.
         </p>
 
-        <div className="mt-10 flex items-center gap-4">
-          <Link
-            href="/sign-up"
-            className="rounded-lg bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-hover transition-colors"
-          >
-            Start researching — it's free
-          </Link>
-        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="group relative">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="What do you want to name your business?"
+              autoFocus
+              spellCheck={false}
+              className="w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] px-6 py-5 pr-28 text-lg outline-none placeholder:text-[var(--muted)]/50 transition-colors focus:border-accent/40"
+            />
+            <button
+              type="submit"
+              disabled={!name.trim()}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-xl bg-accent px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-accent-hover disabled:opacity-0"
+            >
+              Check it
+            </button>
+          </div>
+        </form>
 
-        {/* How it works */}
-        <div className="mt-24 grid w-full max-w-3xl gap-8 md:grid-cols-3">
-          {[
-            {
-              step: '1',
-              title: 'Enter a name',
-              desc: 'Type in the startup name you're considering.',
-            },
-            {
-              step: '2',
-              title: 'AI deep research',
-              desc: 'Our agent checks trademarks, domains, and existing businesses instantly.',
-            },
-            {
-              step: '3',
-              title: 'Get a verdict',
-              desc: 'Clear GO / CAUTION / STOP recommendation with available domains.',
-            },
-          ].map((item) => (
-            <div key={item.step} className="text-left">
-              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-accent-subtle text-sm font-bold text-accent">
-                {item.step}
-              </div>
-              <h3 className="mb-1 font-semibold">{item.title}</h3>
-              <p className="text-sm leading-relaxed text-[var(--muted)]">{item.desc}</p>
-            </div>
-          ))}
-        </div>
+        <p className="mt-6 text-[13px] text-[var(--muted)]/60">
+          Free to try. No account needed to start.
+        </p>
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-[var(--border)] py-6 text-center text-sm text-[var(--muted)]">
+      <div className="absolute bottom-6 text-[13px] text-[var(--muted)]/40">
         Built on{' '}
-        <a href="https://recursiv.io" className="text-accent hover:underline">
+        <a href="https://recursiv.io" className="transition-colors hover:text-[var(--muted)]">
           Recursiv
         </a>
-      </footer>
+      </div>
     </div>
   );
 }

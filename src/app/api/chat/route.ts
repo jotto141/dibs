@@ -2,14 +2,21 @@ import { getRecursiv, AGENT_ID } from '@/lib/recursiv';
 import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
+  // Verify user is authenticated
   const cookieStore = await cookies();
   const token = cookieStore.get('dibs_token')?.value;
   if (!token) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { message, conversation_id } = await request.json();
+  // Validate session is still active
   const r = getRecursiv();
+  const session = await r.auth.getSession(token);
+  if (!session) {
+    return Response.json({ error: 'Session expired' }, { status: 401 });
+  }
+
+  const { message, conversation_id } = await request.json();
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -18,7 +25,6 @@ export async function POST(request: Request) {
         for await (const chunk of r.agents.chatStream(AGENT_ID, {
           message,
           conversation_id,
-          token,
         })) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
           if (chunk.type === 'done') break;

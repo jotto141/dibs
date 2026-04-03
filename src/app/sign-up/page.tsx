@@ -1,11 +1,22 @@
 'use client';
 
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function SignUpPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-[var(--muted)]">Loading...</div>}>
+      <SignUpContent />
+    </Suspense>
+  );
+}
+
+function SignUpContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pendingName = searchParams.get('name') || '';
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,7 +40,11 @@ export default function SignUpPage() {
         throw new Error(data.error || 'Sign up failed');
       }
 
-      router.push('/app');
+      if (pendingName) {
+        router.push(`/app/research?name=${encodeURIComponent(pendingName)}`);
+      } else {
+        router.push('/app');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -40,67 +55,65 @@ export default function SignUpPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <Link href="/" className="mb-8 block text-center text-2xl font-bold tracking-tight">
+        <Link href="/" className="mb-2 block text-center text-2xl font-bold tracking-tight">
           dibs
         </Link>
 
-        <h1 className="mb-1 text-center text-xl font-semibold">Create your account</h1>
-        <p className="mb-8 text-center text-sm text-[var(--muted)]">
-          Get 3 free name searches to start
-        </p>
+        {pendingName && (
+          <p className="mb-6 text-center text-sm text-[var(--muted)]">
+            Create an account to research <span className="font-medium text-[var(--fg)]">{pendingName}</span>
+          </p>
+        )}
+        {!pendingName && (
+          <p className="mb-6 text-center text-sm text-[var(--muted)]">
+            Create an account to get started
+          </p>
+        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-sm outline-none placeholder:text-[var(--muted)] focus:border-accent"
-              placeholder="Your name"
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-sm outline-none placeholder:text-[var(--muted)] focus:border-accent"
-              placeholder="you@example.com"
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-sm outline-none placeholder:text-[var(--muted)] focus:border-accent"
-              placeholder="At least 8 characters"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm outline-none placeholder:text-[var(--muted)] focus:border-accent/40"
+            placeholder="Your name"
+          />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm outline-none placeholder:text-[var(--muted)] focus:border-accent/40"
+            placeholder="Email"
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={12}
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm outline-none placeholder:text-[var(--muted)] focus:border-accent/40"
+            placeholder="Password (12+ characters)"
+          />
 
-          {error && (
-            <p className="text-sm text-red-400">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-accent py-2.5 text-sm font-medium text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
+            className="w-full rounded-xl bg-accent py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
           >
             {loading ? 'Creating account...' : 'Create account'}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-[var(--muted)]">
-          Already have an account?{' '}
-          <Link href="/sign-in" className="text-accent hover:underline">
+        <p className="mt-5 text-center text-sm text-[var(--muted)]">
+          Have an account?{' '}
+          <Link
+            href={pendingName ? `/sign-in?name=${encodeURIComponent(pendingName)}` : '/sign-in'}
+            className="text-accent hover:underline"
+          >
             Sign in
           </Link>
         </p>

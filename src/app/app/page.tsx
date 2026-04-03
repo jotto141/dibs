@@ -19,52 +19,42 @@ export default function AppPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      {/* Nav */}
-      <nav className="border-b border-[var(--border)] bg-[var(--bg)]/80 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <span className="text-lg font-bold tracking-tight">dibs</span>
-          <button
-            onClick={handleSignOut}
-            className="text-sm text-[var(--muted)] hover:text-[var(--fg)] transition-colors"
-          >
-            Sign out
-          </button>
-        </div>
-      </nav>
+    <div className="relative flex min-h-screen flex-col items-center justify-center px-4">
+      <button
+        onClick={handleSignOut}
+        className="absolute right-4 top-4 text-sm text-[var(--muted)] transition-colors hover:text-[var(--fg)]"
+      >
+        Sign out
+      </button>
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col items-center justify-center px-4">
-        <h1 className="mb-2 text-3xl font-bold tracking-tight sm:text-4xl">
-          What do you want to name your business?
+      <div className="w-full max-w-xl text-center">
+        <h1 className="mb-3 text-3xl font-bold tracking-tight">
+          dibs
         </h1>
-        <p className="mb-10 text-[var(--muted)]">
-          Enter a name and our AI expert will research it for you
+        <p className="mx-auto mb-10 max-w-sm text-sm text-[var(--muted)]">
+          Enter a name and get a full analysis on trademarks, domains, and existing businesses.
         </p>
 
-        <form onSubmit={handleSubmit} className="w-full max-w-lg">
-          <div className="flex gap-3">
+        <form onSubmit={handleSubmit}>
+          <div className="group relative">
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Quantum, Nomad, Archway..."
+              placeholder="What do you want to name your business?"
               autoFocus
-              className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-5 py-4 text-lg outline-none placeholder:text-[var(--muted)] focus:border-accent transition-colors"
+              spellCheck={false}
+              className="w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] px-6 py-5 pr-28 text-lg outline-none placeholder:text-[var(--muted)]/50 transition-colors focus:border-accent/40"
             />
             <button
               type="submit"
               disabled={!name.trim()}
-              className="rounded-xl bg-accent px-8 py-4 text-lg font-medium text-white hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-xl bg-accent px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-accent-hover disabled:opacity-0"
             >
-              Research
+              Check it
             </button>
           </div>
         </form>
-
-        <p className="mt-6 text-sm text-[var(--muted)]">
-          You'll get a full trademark, domain, and competitive analysis in seconds
-        </p>
       </div>
     </div>
   );
