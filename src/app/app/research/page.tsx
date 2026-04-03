@@ -199,22 +199,23 @@ function FullReportContent() {
       </div>
 
       {/* Input — visible during chatting phase */}
-      {phase === 'chatting' && !isStreaming && (
+      {phase === 'chatting' && (
         <div className="shrink-0 border-t border-[var(--border)] bg-[var(--bg)]">
           <form onSubmit={handleSend} className="mx-auto flex max-w-2xl gap-3 px-4 py-4">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask a follow-up or try another name..."
-              className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm outline-none placeholder:text-[var(--muted)] focus:border-accent transition-colors"
+              placeholder={isStreaming ? 'Agent is working...' : 'Ask a follow-up or try another name...'}
+              disabled={isStreaming}
+              className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm outline-none placeholder:text-[var(--muted)] focus:border-accent transition-colors disabled:opacity-50"
             />
             <button
               type="submit"
-              disabled={!input.trim()}
+              disabled={!input.trim() || isStreaming}
               className={cn(
                 'rounded-xl px-6 py-3 text-sm font-medium transition-colors',
-                input.trim()
+                input.trim() && !isStreaming
                   ? 'bg-accent text-white hover:bg-accent-hover'
                   : 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
               )}
