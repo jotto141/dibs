@@ -40,7 +40,19 @@ function SignUpContent() {
         throw new Error(data.error || 'Sign up failed');
       }
 
+      // After sign up, go to checkout to add card, then to full report
       if (pendingName) {
+        const checkoutRes = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: pendingName }),
+        });
+        const checkoutData = await checkoutRes.json();
+        if (checkoutData.url) {
+          window.location.href = checkoutData.url;
+          return;
+        }
+        // Fallback if checkout fails — go to report anyway
         router.push(`/app/research?name=${encodeURIComponent(pendingName)}`);
       } else {
         router.push('/app');
