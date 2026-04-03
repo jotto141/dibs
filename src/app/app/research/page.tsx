@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useState, useRef, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -21,13 +21,13 @@ export default function FullReportPage() {
 
 function FullReportContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const initialName = searchParams.get('name') || '';
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [conversationId, setConversationId] = useState<string | undefined>();
+  const [phase, setPhase] = useState<'welcome' | 'ready' | 'researching' | 'done'>('welcome');
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasStarted = useRef(false);
 
@@ -35,12 +35,30 @@ function FullReportContent() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
+  // On mount: show a welcome message from the agent with typing effect
   useEffect(() => {
-    if (initialName && !hasStarted.current) {
+    if (!hasStarted.current) {
       hasStarted.current = true;
-      sendMessage(`Research the startup name: ${initialName}`);
+      showWelcome();
     }
-  }, [initialName]);
+  }, []);
+
+  async function showWelcome() {
+    const welcomeMsg: Message = { id: crypto.randomUUID(), content: '', role: 'agent' };
+    setMessages([welcomeMsg]);
+
+    const text = initialName
+      ? `Hey! Welcome to Dibs. I'm your naming research agent.\n\nI see you want to look into "${initialName}" — I'll run a full analysis on trademarks, domain availability, existing businesses, and more.\n\nReady when you are. Just say the word.`
+      : `Hey! Welcome to Dibs. I'm your naming research agent.\n\nI can run deep research on any startup name — trademarks, domains, existing businesses, the works.\n\nWhat name do you want me to look into?`;
+
+    // Type it out character by character
+    for (let i = 0; i <= text.length; i++) {
+      await new Promise((r) => setTimeout(r, 8));
+      setMessages([{ ...welcomeMsg, content: text.slice(0, i) }]);
+    }
+
+    setPhase(initialName ? 'ready' : 'done');
+  }
 
   async function sendMessage(text: string) {
     const userMsg: Message = { id: crypto.randomUUID(), content: text, role: 'user' };
@@ -48,6 +66,7 @@ function FullReportContent() {
 
     setMessages((prev) => [...prev, userMsg, agentMsg]);
     setIsStreaming(true);
+    setPhase('researching');
 
     try {
       const res = await fetch('/api/chat', {
@@ -95,7 +114,7 @@ function FullReportContent() {
               });
             }
           } catch {
-            // skip malformed chunks
+            // skip malformed
           }
         }
       }
@@ -111,6 +130,7 @@ function FullReportContent() {
       });
     } finally {
       setIsStreaming(false);
+      setPhase('done');
     }
   }
 
@@ -122,9 +142,8 @@ function FullReportContent() {
     sendMessage(text);
   }
 
-  async function handleSignOut() {
-    await fetch('/api/auth/sign-out', { method: 'POST' });
-    router.push('/');
+  function handleStartResearch() {
+    sendMessage(`Run a full name analysis on "${initialName}". Check trademarks, domain availability across all major TLDs, existing businesses, phonetic conflicts, and suggest alternatives if there are issues.`);
   }
 
   return (
@@ -132,21 +151,7 @@ function FullReportContent() {
       {/* Nav */}
       <nav className="shrink-0 border-b border-[var(--border)] bg-[var(--bg)]/80 backdrop-blur-sm">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <Link href="/app" className="text-lg font-bold tracking-tight">dibs</Link>
-            <Link
-              href="/app"
-              className="rounded-md bg-accent-subtle px-3 py-1 text-sm font-medium text-accent hover:bg-accent/20 transition-colors"
-            >
-              New search
-            </Link>
-          </div>
-          <button
-            onClick={handleSignOut}
-            className="text-sm text-[var(--muted)] hover:text-[var(--fg)] transition-colors"
-          >
-            Sign out
-          </button>
+          <Link href="/app" className="text-lg font-bold tracking-tight">dibs</Link>
         </div>
       </nav>
 
@@ -168,41 +173,55 @@ function FullReportContent() {
               >
                 <div className="whitespace-pre-wrap break-words">
                   {msg.content}
-                  {isStreaming && i === messages.length - 1 && msg.role === 'agent' && (
+                  {((phase === 'welcome') || (isStreaming && i === messages.length - 1 && msg.role === 'agent')) && (
                     <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-[var(--muted)]" />
                   )}
                 </div>
               </div>
             </div>
           ))}
+
+          {/* "Let's go" button after welcome */}
+          {phase === 'ready' && (
+            <div className="flex justify-end">
+              <button
+                onClick={handleStartResearch}
+                className="rounded-2xl bg-accent px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+              >
+                Let's do it — research "{initialName}"
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Input */}
-      <div className="shrink-0 border-t border-[var(--border)] bg-[var(--bg)]">
-        <form onSubmit={handleSend} className="mx-auto flex max-w-2xl gap-3 px-4 py-4">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a follow-up question..."
-            disabled={isStreaming}
-            className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm outline-none placeholder:text-[var(--muted)] focus:border-accent transition-colors"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isStreaming}
-            className={cn(
-              'rounded-xl px-6 py-3 text-sm font-medium transition-colors',
-              input.trim() && !isStreaming
-                ? 'bg-accent text-white hover:bg-accent-hover'
-                : 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
-            )}
-          >
-            Send
-          </button>
-        </form>
-      </div>
+      {/* Input — only show after initial research is done */}
+      {phase === 'done' && (
+        <div className="shrink-0 border-t border-[var(--border)] bg-[var(--bg)]">
+          <form onSubmit={handleSend} className="mx-auto flex max-w-2xl gap-3 px-4 py-4">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask a follow-up or try another name..."
+              disabled={isStreaming}
+              className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm outline-none placeholder:text-[var(--muted)] focus:border-accent transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isStreaming}
+              className={cn(
+                'rounded-xl px-6 py-3 text-sm font-medium transition-colors',
+                input.trim() && !isStreaming
+                  ? 'bg-accent text-white hover:bg-accent-hover'
+                  : 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
+              )}
+            >
+              Send
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
