@@ -11,31 +11,13 @@ interface Preview {
   summary: string;
 }
 
-const UNLOCKABLE_SECTIONS = [
-  {
-    title: 'Domain Availability',
-    desc: '.com, .io, .ai, .dev, .co, .app — which are actually open',
-  },
-  {
-    title: 'Trademark Conflicts',
-    desc: 'Detailed risk analysis across relevant trademark classes',
-  },
-  {
-    title: 'Existing Businesses',
-    desc: 'Companies with the same or similar names',
-  },
-  {
-    title: 'Alternative Names',
-    desc: 'AI-suggested alternatives if your name has issues',
-  },
-  {
-    title: 'Creative Domains',
-    desc: 'Available variations like getname.io, namehq.com',
-  },
-  {
-    title: 'Follow-up Chat',
-    desc: 'Ask questions and dig deeper with our research agent',
-  },
+const RESEARCH_STEPS = [
+  'Analyzing name structure...',
+  'Checking trademark databases...',
+  'Scanning existing businesses...',
+  'Testing domain availability...',
+  'Evaluating phonetic conflicts...',
+  'Generating report...',
 ];
 
 const VERDICT_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -49,6 +31,29 @@ const RISK_STYLES: Record<string, string> = {
   MEDIUM: 'text-amber-400',
   HIGH: 'text-red-400',
 };
+
+function StepItem({ text }: { text: string }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-3 transition-all duration-300',
+        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+      )}
+    >
+      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10">
+        <div className="h-1.5 w-1.5 rounded-full bg-accent" />
+      </div>
+      <span className="text-sm text-[var(--muted)]">{text}</span>
+    </div>
+  );
+}
 
 export default function ResearchPage() {
   return (
@@ -65,18 +70,32 @@ function ResearchContent() {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [visibleSteps, setVisibleSteps] = useState<string[]>([]);
+  const [showResult, setShowResult] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const hasStarted = useRef(false);
 
   useEffect(() => {
     if (name && !hasStarted.current) {
       hasStarted.current = true;
-      fetchPreview(name);
+      startResearch(name);
     }
   }, [name]);
 
-  async function fetchPreview(n: string) {
+  async function startResearch(n: string) {
     setLoading(true);
     setError('');
+    setVisibleSteps([]);
+    setShowResult(false);
+
+    let stepIndex = 0;
+    const stepInterval = setInterval(() => {
+      if (stepIndex < RESEARCH_STEPS.length) {
+        setVisibleSteps((prev) => [...prev, RESEARCH_STEPS[stepIndex]]);
+        stepIndex++;
+      }
+    }, 1200);
+
     try {
       const res = await fetch('/api/preview', {
         method: 'POST',
@@ -87,9 +106,23 @@ function ResearchContent() {
       setPreview(data);
     } catch {
       setError('Something went wrong. Try again.');
-    } finally {
-      setLoading(false);
     }
+
+    const waitForSteps = () =>
+      new Promise<void>((resolve) => {
+        const check = setInterval(() => {
+          if (stepIndex >= RESEARCH_STEPS.length) {
+            clearInterval(check);
+            resolve();
+          }
+        }, 200);
+      });
+
+    await waitForSteps();
+    clearInterval(stepInterval);
+    await new Promise((r) => setTimeout(r, 600));
+    setLoading(false);
+    setShowResult(true);
   }
 
   const signUpUrl = `/sign-up${name ? `?name=${encodeURIComponent(name)}` : ''}`;
@@ -97,47 +130,70 @@ function ResearchContent() {
 
   return (
     <div className="min-h-screen">
-      {/* Nav */}
       <nav className="border-b border-[var(--border)] bg-[var(--bg)]/80 backdrop-blur-sm">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link href="/" className="text-lg font-bold tracking-tight">
-            dibs
-          </Link>
-          <Link
-            href={signUpUrl}
-            className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
-          >
-            Sign up to unlock
-          </Link>
+          <Link href="/" className="text-lg font-bold tracking-tight">dibs</Link>
         </div>
       </nav>
 
+      {/* Upgrade modal */}
+      {showUpgrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
+            <h2 className="mb-1 text-lg font-bold">Pay as you go</h2>
+            <p className="mb-5 text-sm text-[var(--muted)]">
+              No monthly fee. Add a credit card and pay for what you actually use.
+            </p>
+            <Link
+              href={signUpUrl}
+              className="block w-full rounded-xl bg-accent py-3 text-center text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+            >
+              Add credit card
+            </Link>
+            <button
+              onClick={() => setShowUpgrade(false)}
+              className="mt-3 w-full py-2 text-center text-sm text-[var(--muted)] transition-colors hover:text-[var(--fg)]"
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto max-w-xl px-4 py-12">
-        {/* Name being researched */}
         <div className="mb-8 text-center">
-          <p className="mb-1 text-sm text-[var(--muted)]">Results for</p>
+          <p className="mb-1 text-sm text-[var(--muted)]">
+            {loading ? 'Researching' : 'Results for'}
+          </p>
           <h1 className="text-3xl font-bold tracking-tight">{name}</h1>
         </div>
 
-        {/* Loading */}
+        {/* Processing animation */}
         {loading && (
-          <div className="flex flex-col items-center gap-3 py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--border)] border-t-accent" />
-            <p className="text-sm text-[var(--muted)]">Analyzing {name}...</p>
+          <div className="space-y-3">
+            {visibleSteps.map((step, i) => (
+              <StepItem key={i} text={step} />
+            ))}
+            {visibleSteps.length < RESEARCH_STEPS.length && (
+              <div className="flex items-center gap-3 pt-1">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-accent" />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-center text-sm text-red-400">
             {error}
           </div>
         )}
 
-        {/* Preview result */}
-        {preview && vs && (
+        {/* Result */}
+        {showResult && preview && vs && (
           <div className="space-y-6">
-            {/* Verdict card */}
+            {/* Verdict */}
             <div className={cn('rounded-2xl border p-6 text-center', vs.bg, vs.border)}>
               <div className={cn('mb-1 text-3xl font-bold tracking-tight', vs.text)}>
                 {preview.verdict}
@@ -148,42 +204,42 @@ function ResearchContent() {
               <p className="text-sm leading-relaxed">{preview.summary}</p>
             </div>
 
-            {/* What's in the full report */}
-            <div>
-              <h3 className="mb-3 text-sm font-medium text-[var(--muted)]">
-                Unlock the full report
-              </h3>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {UNLOCKABLE_SECTIONS.map((section) => (
-                  <div
-                    key={section.title}
-                    className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3"
-                  >
-                    <div className="mb-0.5 text-sm font-medium">{section.title}</div>
-                    <div className="text-xs leading-relaxed text-[var(--muted)]">{section.desc}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* CTA */}
-            <div className="rounded-2xl border border-accent/20 bg-accent/5 p-6 text-center">
-              <h2 className="mb-1 text-lg font-bold">See the full analysis</h2>
-              <p className="mb-5 text-sm text-[var(--muted)]">
-                Create a free account to unlock domains, trademarks, competitors, and more.
-              </p>
-              <Link
-                href={signUpUrl}
-                className="inline-block rounded-xl bg-accent px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+            {/* Unlock CTA */}
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <button
+                onClick={() => setShowUpgrade(true)}
+                className="mb-4 w-full rounded-xl bg-accent py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
               >
-                Create free account
-              </Link>
-              <p className="mt-3 text-xs text-[var(--muted)]">
-                3 full reports free. No credit card required.
-              </p>
+                Unlock full report
+              </button>
+              <ul className="space-y-2 text-sm text-[var(--muted)]">
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-accent">&#10003;</span>
+                  Domain availability across .com, .io, .ai, .dev, .co, .app
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-accent">&#10003;</span>
+                  Detailed trademark conflict analysis
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-accent">&#10003;</span>
+                  Existing businesses using similar names
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-accent">&#10003;</span>
+                  Creative domain suggestions that are available
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-accent">&#10003;</span>
+                  Alternative name recommendations
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-accent">&#10003;</span>
+                  Follow-up chat with our research agent
+                </li>
+              </ul>
             </div>
 
-            {/* Try another */}
             <div className="text-center">
               <Link href="/" className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--fg)]">
                 Try a different name
