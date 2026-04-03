@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 interface Preview {
+  take: string | null;
   verdict: 'GO' | 'CAUTION' | 'STOP';
   risk: 'LOW' | 'MEDIUM' | 'HIGH';
   summary: string;
@@ -193,6 +194,13 @@ function ResearchContent() {
         {/* Result */}
         {showResult && preview && vs && (
           <div className="space-y-6">
+            {/* Agent's take */}
+            {preview.take && (
+              <p className="text-center text-sm leading-relaxed italic text-[var(--muted)]">
+                "{preview.take}"
+              </p>
+            )}
+
             {/* Verdict */}
             <div className={cn('rounded-2xl border p-6 text-center shadow-lg', vs.bg, vs.border, vs.glow)}>
               <div className={cn('mb-1 text-3xl font-bold tracking-tight', vs.text)}>

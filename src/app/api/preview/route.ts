@@ -17,23 +17,25 @@ export async function POST(request: Request) {
 
     const text = result.data?.content || '';
 
+    const takeMatch = text.match(/TAKE:\s*(.+)/i);
     const verdictMatch = text.match(/VERDICT:\s*(GO|CAUTION|STOP)/i);
     const riskMatch = text.match(/RISK:\s*(LOW|MEDIUM|HIGH)/i);
     const summaryMatch = text.match(/SUMMARY:\s*(.+)/i);
 
-    // If we got a valid structured response, use it
     if (verdictMatch && summaryMatch) {
       return Response.json({
+        take: takeMatch?.[1]?.trim() || null,
         verdict: verdictMatch[1].toUpperCase(),
         risk: riskMatch?.[1]?.toUpperCase() || 'MEDIUM',
         summary: summaryMatch[1].trim(),
       });
     }
 
-    // If agent responded but not in expected format, use the raw text as summary
+    // Agent responded but not in expected format — use raw text
     if (text.trim().length > 10) {
       const firstSentence = text.split(/[.!?]\s/)[0] + '.';
       return Response.json({
+        take: null,
         verdict: 'CAUTION',
         risk: 'MEDIUM',
         summary: firstSentence.length > 200 ? firstSentence.slice(0, 197) + '...' : firstSentence,
@@ -41,12 +43,12 @@ export async function POST(request: Request) {
     }
 
     return Response.json({
+      take: null,
       verdict: 'CAUTION',
       risk: 'MEDIUM',
-      summary: `"${name}" has potential but needs deeper analysis — common words and short names tend to have more conflicts.`,
+      summary: `"${name}" has potential but needs deeper analysis to assess the full landscape.`,
     });
   } catch {
-    // Even on error, give them something specific to the name
     const len = name.length;
     const isShort = len <= 5;
     const isReal = /^[a-z]+$/i.test(name);
@@ -63,6 +65,7 @@ export async function POST(request: Request) {
     }
 
     return Response.json({
+      take: null,
       verdict: 'CAUTION',
       risk: 'MEDIUM',
       summary: hint,
